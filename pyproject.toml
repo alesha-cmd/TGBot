@@ -1,0 +1,9 @@
+[project]
+name = "trecker-bot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+# ОШИБКА: dependencies пустой, но есть requirements.txt с зависимостями.
+# Это может привести к проблемам при установке пакета через pip.
+dependencies = []
