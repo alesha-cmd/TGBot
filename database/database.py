@@ -1,11 +1,12 @@
 """
 SQLite база данных для Habit Tracker Bot
+Упрощенная версия для отладки
 """
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import Column, Integer, String, BigInteger, DateTime, Boolean, Text
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, BigInteger, DateTime, Boolean, Text, func, and_, or_
+from datetime import datetime, date, timedelta
 from config import DATABASE_URL
 import logging
 
@@ -18,7 +19,6 @@ Base = declarative_base()
 # МОДЕЛИ БАЗЫ ДАННЫХ
 # ======================
 
-
 class User(Base):
     """Модель пользователя"""
     __tablename__ = "users"
@@ -29,7 +29,6 @@ class User(Base):
     first_name = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
 
-
 class UserHabit(Base):
     """Модель привычек пользователя"""
     __tablename__ = "user_habits"
@@ -37,15 +36,13 @@ class UserHabit(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, nullable=False)
     current_habit = Column(String(100), nullable=False)
-    # 'positive' или 'negative'
-    habit_type = Column(String(20), nullable=False)
+    habit_type = Column(String(20), nullable=False)  # 'positive' или 'negative'
     current_streak = Column(Integer, default=0)
     best_streak = Column(Integer, default=0)
     total_days = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow,
-                        onupdate=datetime.utcnow)
-
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_log_date = Column(DateTime)  # Добавляем поле для отслеживания последней записи
 
 class HabitLog(Base):
     """Модель логов привычек"""
@@ -61,7 +58,6 @@ class HabitLog(Base):
 # КЛАСС ДЛЯ РАБОТЫ С БД
 # ======================
 
-
 class SQLiteDatabase:
     """Класс для работы с SQLite"""
 
@@ -69,7 +65,7 @@ class SQLiteDatabase:
         # Создаем асинхронный движок для SQLite
         self.engine = create_async_engine(
             DATABASE_URL,
-            echo=False,  # Выключаем логи SQL запросов
+            echo=True,  # ВКЛЮЧАЕМ логи SQL запросов для отладки
             connect_args={"check_same_thread": False}  # Для SQLite
         )
 
@@ -100,7 +96,6 @@ class SQLiteDatabase:
         """Получить или создать пользователя"""
         async with self.async_session() as session:
             try:
-                # Пытаемся найти пользователя
                 from sqlalchemy import select
                 result = await session.execute(
                     select(User).where(User.user_id == user_id)
@@ -129,8 +124,7 @@ class SQLiteDatabase:
 
             except Exception as e:
                 await session.rollback()
-                logger.error(
-                    f"❌ Ошибка при работе с пользователем {user_id}: {e}")
+                logger.error(f"❌ Ошибка при работе с пользователем {user_id}: {e}")
                 raise
 
     async def get_user(self, user_id: int):
@@ -160,8 +154,7 @@ class SQLiteDatabase:
                 )
                 return result.scalar_one_or_none()
             except Exception as e:
-                logger.error(
-                    f"❌ Ошибка получения привычки пользователя {user_id}: {e}")
+                logger.error(f"❌ Ошибка получения привычки пользователя {user_id}: {e}")
                 return None
 
     async def create_user_habit(self, user_id: int, habit_name: str, habit_type: str):
@@ -177,7 +170,11 @@ class SQLiteDatabase:
                 habit = UserHabit(
                     user_id=user_id,
                     current_habit=habit_name,
-                    habit_type=habit_type
+                    habit_type=habit_type,
+                    current_streak=0,
+                    best_streak=0,
+                    total_days=0,
+                    last_log_date=None
                 )
                 session.add(habit)
                 await session.commit()
@@ -188,24 +185,44 @@ class SQLiteDatabase:
                 logger.error(f"❌ Ошибка создания привычки для {user_id}: {e}")
                 raise
 
-    async def update_habit_streak(self, user_id: int, success: bool):
-        """Обновить серию привычки"""
+    async def update_habit_streak_simple(self, user_id: int, success: bool):
+        """Упрощенная версия обновления серии - для отладки"""
         async with self.async_session() as session:
             try:
-                habit = await self.get_user_habit(user_id)
+                # Получаем привычку
+                from sqlalchemy import select
+                result = await session.execute(
+                    select(UserHabit).where(UserHabit.user_id == user_id)
+                )
+                habit = result.scalar_one_or_none()
+
                 if not habit:
+                    logger.warning(f"⚠️ Привычка не найдена для пользователя {user_id}")
                     return None
 
+                print(f"🔄 Обновление серии для {user_id}: текущая серия={habit.current_streak}, успех={success}")
+
                 if success:
+                    # Увеличиваем серию
                     habit.current_streak += 1
                     habit.total_days += 1
+
+                    # Обновляем лучшую серию
                     if habit.current_streak > habit.best_streak:
                         habit.best_streak = habit.current_streak
+
+                    print(f"✅ Серия увеличена: {habit.current_streak} дней")
                 else:
+                    # Сброс серии
                     habit.current_streak = 0
+                    print(f"🔄 Серия сброшена")
+
+                # Обновляем дату последнего лога
+                habit.last_log_date = datetime.now()
 
                 await session.commit()
                 return habit
+
             except Exception as e:
                 await session.rollback()
                 logger.error(f"❌ Ошибка обновления серии для {user_id}: {e}")
@@ -215,23 +232,70 @@ class SQLiteDatabase:
     # МЕТОДЫ ДЛЯ ЛОГОВ
     # ======================
 
-    async def add_habit_log(self, user_id: int, habit_name: str, success: bool):
-        """Добавить лог привычки"""
+    async def add_habit_log_simple(self, user_id: int, habit_name: str, success: bool):
+        """Упрощенная версия добавления лога - для отладки"""
         async with self.async_session() as session:
             try:
+                print(f"📝 Добавление лога для {user_id}: {habit_name}, успех={success}")
+
+                # Создаем новый лог
                 log = HabitLog(
                     user_id=user_id,
                     habit_name=habit_name,
-                    success=success
+                    success=success,
+                    log_date=datetime.now()
                 )
                 session.add(log)
                 await session.commit()
-                return log
+                print(f"✅ Лог добавлен: {user_id} - {habit_name} - успех={success}")
+
+                # Обновляем серию
+                updated_habit = await self.update_habit_streak_simple(user_id, success)
+
+                if updated_habit:
+                    print(f"📊 Серия обновлена: {updated_habit.current_streak} дней")
+                    return updated_habit
+                else:
+                    print(f"⚠️ Не удалось обновить серию")
+                    return None
+
             except Exception as e:
                 await session.rollback()
                 logger.error(f"❌ Ошибка добавления лога для {user_id}: {e}")
                 return None
 
+    async def get_habit_stats(self, user_id: int):
+        """Получить статистику привычки"""
+        async with self.async_session() as session:
+            try:
+                from sqlalchemy import select, func, and_
+
+                # Получаем привычку
+                habit = await self.get_user_habit(user_id)
+                if not habit:
+                    return None
+
+                print(f"📊 Получение статистики для {user_id}: текущая серия={habit.current_streak}")
+
+                # Получаем общее количество успешных дней
+                result = await session.execute(
+                    select(func.count(HabitLog.id))
+                    .where(and_(
+                        HabitLog.user_id == user_id,
+                        HabitLog.habit_name == habit.current_habit,
+                        HabitLog.success == True
+                    ))
+                )
+                total_success = result.scalar() or 0
+
+                return {
+                    'habit': habit,
+                    'total_success': total_success,
+                    'success_rate': (total_success / habit.total_days * 100) if habit.total_days > 0 else 0
+                }
+            except Exception as e:
+                logger.error(f"❌ Ошибка получения статистики для {user_id}: {e}")
+                return None
 
 # Глобальный экземпляр БД
 db = SQLiteDatabase()

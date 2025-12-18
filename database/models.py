@@ -26,8 +26,8 @@ class UserHabit(Base):
     best_streak = Column(Integer, default=0)
     total_days = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow,
-                        onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_log_date = Column(DateTime)  # Добавлено
 
 
 class HabitLog(Base):

@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from database.database import db
 from utils.states import HabitStates
 from keyboards.keyboards import get_main_menu_keyboard, get_confirmation_keyboard, get_habit_type_keyboard
-from handlers.start_handler import cmd_menu
+from handlers.start_handlers import cmd_menu
 
 async def show_current_habit(message: types.Message):
     await cmd_menu(message)

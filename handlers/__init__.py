@@ -1,4 +1,4 @@
-from .start_handler import cmd_start, cmd_menu
+from .start_handlers import cmd_start, cmd_menu
 from .menu_handlers import (
     show_current_habit,
     show_statistics,

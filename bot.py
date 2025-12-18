@@ -1,13 +1,14 @@
 import asyncio
 import logging
-
+# ОШИБКА: Импорты aiogram могут не разрешаться, если зависимости не установлены.
+# В pyproject.toml dependencies пустой, но requirements.txt содержит нужные пакеты.
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN
 from database.database import db
-from handlers.start_handler import cmd_start, cmd_menu
+from handlers.start_handlers import cmd_start, cmd_menu
 from handlers.menu_handlers import (
     show_current_habit, show_statistics, change_habit_start,
     confirm_habit_change, cancel_habit_change

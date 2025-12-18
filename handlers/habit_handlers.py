@@ -73,15 +73,15 @@ async def process_daily_check(message: types.Message):
 
     success = message.text in ["✅ Сделал(а)", "✅ Да, удалось!"]
 
-    # Обновляем статистику
-    updated_habit = await db.update_habit_streak(user_id, success)
+    # Используем упрощенную версию для отладки
+    updated_habit = await db.add_habit_log_simple(user_id, habit.current_habit, success)
 
-    # Логируем результат
-    await db.add_habit_log(user_id, habit.current_habit, success)
-
-    if success:
-        response = f"Отлично! Ты молодец. Твоя серия: {updated_habit.current_streak} дней подряд!"
+    if updated_habit:
+        if success:
+            response = f"Отлично! Ты молодец. Твоя серия: {updated_habit.current_streak} дней подряд!"
+        else:
+            response = "Бывает. Главное — не сдаваться. Завтра новый день!"
     else:
-        response = "Бывает. Главное — не сдаваться. Завтра новый день!"
+        response = "Произошла ошибка при сохранении результата. Попробуй еще раз."
 
     await message.answer(response, reply_markup=get_main_menu_keyboard())

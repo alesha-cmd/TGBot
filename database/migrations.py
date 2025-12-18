@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 class DatabaseMigrator:
     """Класс для управления миграциями базы данных"""
 
+    async def add_last_log_date_column(self):
+        """Добавить столбец last_log_date в таблицу user_habits"""
+        return await self.add_column_if_not_exists("user_habits", "last_log_date", "DATETIME")
     def __init__(self):
         self.engine = create_async_engine(DATABASE_URL, echo=False)
 
@@ -40,8 +43,7 @@ class DatabaseMigrator:
             for table in tables:
                 try:
                     result = await conn.execute(
-                        text(
-                            f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
+                        text(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
                     )
                     if not result.fetchone():
                         missing_tables.append(table)
@@ -65,16 +67,13 @@ class DatabaseMigrator:
 
                 if column_name not in columns:
                     await conn.execute(
-                        text(
-                            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+                        text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
                     )
                     await conn.commit()
-                    logger.info(
-                        f"✅ Добавлен столбец {column_name} в таблицу {table_name}")
+                    logger.info(f"✅ Добавлен столбец {column_name} в таблицу {table_name}")
                     return True
                 else:
-                    logger.info(
-                        f"ℹ️ Столбец {column_name} уже существует в {table_name}")
+                    logger.info(f"ℹ️ Столбец {column_name} уже существует в {table_name}")
                     return False
         except Exception as e:
             logger.error(f"❌ Ошибка добавления столбца {column_name}: {e}")
@@ -88,8 +87,7 @@ class DatabaseMigrator:
         try:
             async with self.engine.connect() as conn:
                 await conn.execute(
-                    text(
-                        f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_name}({column_name})")
+                    text(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_name}({column_name})")
                 )
                 await conn.commit()
                 logger.info(f"✅ Создан индекс {index_name}")
@@ -105,6 +103,7 @@ class DatabaseMigrator:
         # 1. Добавляем новые столбцы
         await self.add_column_if_not_exists("user_habits", "notes", "TEXT")
         await self.add_column_if_not_exists("habit_logs", "comment", "TEXT")
+        await self.add_column_if_not_exists("user_habits", "last_log_date", "DATETIME")  # Добавлено
 
         # 2. Создаем индексы для ускорения
         await self.create_index("habit_logs", "user_id")
@@ -125,8 +124,7 @@ class DatabaseMigrator:
                 logger.info(f"✅ Резервная копия создана: {backup_path}")
                 return True
             else:
-                logger.warning(
-                    "⚠️ Файл базы данных не найден для резервного копирования")
+                logger.warning("⚠️ Файл базы данных не найден для резервного копирования")
                 return False
         except Exception as e:
             logger.error(f"❌ Ошибка создания резервной копии: {e}")
