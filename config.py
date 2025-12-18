@@ -5,10 +5,7 @@ load_dotenv()
 
 # Токен бота
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-# ОШИБКА: Если .env файл не существует или BOT_TOKEN не установлен,
-# код выбросит ошибку при попытке создать бота
 
-# SQLite база данных (проще и не требует установки PostgreSQL)
 DATABASE_URL = "sqlite+aiosqlite:///habits.db"
 
 # Проверка токена

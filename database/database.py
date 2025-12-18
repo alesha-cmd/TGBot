@@ -1,8 +1,3 @@
-"""
-SQLite база данных для Habit Tracker Bot
-Упрощенная версия для отладки
-"""
-
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, String, BigInteger, DateTime, Boolean, Text, func, and_, or_
@@ -14,10 +9,6 @@ logger = logging.getLogger(__name__)
 
 # Базовый класс для моделей
 Base = declarative_base()
-
-# ======================
-# МОДЕЛИ БАЗЫ ДАННЫХ
-# ======================
 
 class User(Base):
     """Модель пользователя"""
@@ -54,10 +45,6 @@ class HabitLog(Base):
     success = Column(Boolean, nullable=False)
     log_date = Column(DateTime, default=datetime.utcnow)
 
-# ======================
-# КЛАСС ДЛЯ РАБОТЫ С БД
-# ======================
-
 class SQLiteDatabase:
     """Класс для работы с SQLite"""
 
@@ -87,10 +74,6 @@ class SQLiteDatabase:
         except Exception as e:
             logger.error(f"❌ Ошибка создания таблиц: {e}")
             return False
-
-    # ======================
-    # МЕТОДЫ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ
-    # ======================
 
     async def get_or_create_user(self, user_id: int, username: str = None, first_name: str = None):
         """Получить или создать пользователя"""
@@ -140,9 +123,6 @@ class SQLiteDatabase:
                 logger.error(f"❌ Ошибка получения пользователя {user_id}: {e}")
                 return None
 
-    # ======================
-    # МЕТОДЫ ДЛЯ ПРИВЫЧЕК
-    # ======================
 
     async def get_user_habit(self, user_id: int):
         """Получить привычку пользователя"""
@@ -228,9 +208,6 @@ class SQLiteDatabase:
                 logger.error(f"❌ Ошибка обновления серии для {user_id}: {e}")
                 return None
 
-    # ======================
-    # МЕТОДЫ ДЛЯ ЛОГОВ
-    # ======================
 
     async def add_habit_log_simple(self, user_id: int, habit_name: str, success: bool):
         """Упрощенная версия добавления лога - для отладки"""

@@ -1,8 +1,3 @@
-"""
-Миграции базы данных для Habit Tracker Bot
-Используется Alembic для управления изменениями структуры БД
-"""
-
 import asyncio
 import logging
 from sqlalchemy.ext.asyncio import create_async_engine
