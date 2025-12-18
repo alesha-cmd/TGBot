@@ -4,3 +4,4 @@
 ## Запуск бота
 ### Забустить файл bot.py для начала работы бота
 ### Ссылка на бота "https://t.me/treckerr_bot"
+### Создать файл .env и скопировать туда эту строчку - BOT_TOKEN=8265054220:AAFz-y30Ixihn_qhkOP9PDdNm2iuCndaIAw
